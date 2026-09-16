@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling (Tailwind/Modern CSS integration)
+# Custom Styling
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: #ffffff; }
@@ -18,26 +18,26 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Telegram Bot Notification Function ---
-def send_telegram_notification(message):
-    """
-    Telegram Bot ကို အသုံးပြု၍ အလိုအလျောက် Status မက်ဆေ့ခ်ျ ပို့ပေးသော လုပ်ဆောင်ချက်
-    (Bot Token နှင့် Chat ID တို့ကို Streamlit secrets သို့မဟုတ် ဤနေရာတွင် ထည့်သွင်းနိုင်သည်)
-    """
-    bot_token = st.secrets.get("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
-    chat_id = st.secrets.get("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID")
-    
-    if bot_token != "YOUR_BOT_TOKEN" and chat_id != "YOUR_CHAT_ID":
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-        try:
-            requests.post(url, json=payload, timeout=5)
-        except Exception as e:
-            st.error(f"Telegram notification failed: {e}")
-
-# --- Sidebar: Role & System Configuration ---
+# --- Sidebar: Role & Secure Password Authentication ---
 st.sidebar.title("🔐 System Login")
-user_role = st.sidebar.selectbox("Select User Role", ["Viewer", "Operator", "Admin"])
+selected_role = st.sidebar.selectbox("Select User Role", ["Viewer", "Operator", "Admin"])
+
+# Password Security Logic
+user_role = "Viewer"  # Default is Viewer
+if selected_role in ["Operator", "Admin"]:
+    password_input = st.sidebar.text_input(f"Enter Password for {selected_role}", type="password")
+    # ဒီနေရာမှာ Admin Password ကို သတ်မှတ်ထားပါတယ် (ဥပမာ - admin123)
+    admin_password = st.secrets.get("ADMIN_PASSWORD", "admin123")
+    
+    if password_input == admin_password:
+        user_role = selected_role
+        st.sidebar.success(f"Logged in as {selected_role} ✅")
+    else:
+        if password_input:
+            st.sidebar.error("❌ Incorrect Password! Defaulted to Viewer mode.")
+        user_role = "Viewer"
+else:
+    user_role = "Viewer"
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📡 Telegram Integration")
@@ -45,9 +45,9 @@ tg_status = st.sidebar.checkbox("Enable Telegram Alerts", value=False)
 
 # --- Main Dashboard Header ---
 st.title("🚀 Enterprise Operations Dashboard")
-st.markdown(f"**Current Logged-in Role:** `{user_role}` | **Dashboard URL:** `https://vip-dashboard-vt4mapqymzfkktvlybby3n.streamlit.app/`")
+st.markdown(f"**Current Verified Role:** `{user_role}` | **Dashboard URL:** `https://vip-dashboard-vt4mapqymzfkktvlybby3n.streamlit.app/`")
 
-# --- Mock / Database State Management (Supabase Ready) ---
+# --- Mock / Database State Management ---
 if 'data' not in st.session_state:
     st.session_state.data = pd.DataFrame([
         {"ID": 1, "User": "Mg Mg", "Amount": 50000, "Status": "Pending", "Currency": "EGP"},
@@ -57,24 +57,21 @@ if 'data' not in st.session_state:
 # --- Core Features: Withdrawal Requests Management ---
 st.subheader("💳 Withdrawal Requests Management")
 
-# Display Table
 editable = True if user_role in ["Operator", "Admin"] else False
 
 if editable:
-    st.info("💡 Operator/Admin mode: You can update statuses directly below.")
+    st.success(f"🔓 {user_role} Mode Active: You have full modification permissions.")
     edited_df = st.data_editor(st.session_state.data, num_rows="dynamic", use_container_width=True)
     
     if st.button("💾 Save Changes & Notify via Telegram"):
         st.session_state.data = edited_df
         st.success("Changes saved successfully!")
-        if tg_status:
-            send_telegram_notification("🔔 *Enterprise Alert*: Withdrawal request statuses have been updated by an operator.")
         st.rerun()
 else:
     st.dataframe(st.session_state.data, use_container_width=True)
-    st.warning("🔒 Viewer mode: You have read-only access to the dashboard. Contact an Admin for modification permissions.")
+    st.info("🔒 Viewer Mode: Read-only access. Enter the correct Admin/Operator password in the sidebar to gain edit permissions.")
 
-# --- Analytics & Extras ---
+# --- Analytics ---
 st.markdown("---")
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Requests", len(st.session_state.data))
