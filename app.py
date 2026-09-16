@@ -27,7 +27,7 @@ user_role = "Viewer"  # Default is Viewer
 if selected_role in ["Operator", "Admin"]:
     password_input = st.sidebar.text_input(f"Enter Password for {selected_role}", type="password")
     # ဒီနေရာမှာ Admin Password ကို သတ်မှတ်ထားပါတယ် (ဥပမာ - admin123)
-    admin_password = st.secrets.get("ADMIN_PASSWORD", "admin123")
+    admin_password = st.secrets.get("ADMIN_PASSWORD", "ayeko1993")
     
     if password_input == admin_password:
         user_role = selected_role
