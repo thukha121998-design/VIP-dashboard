@@ -18,16 +18,37 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Telegram Notification Function ---
+def send_telegram_notification(message):
+    """
+    Telegram Bot မှတစ်ဆင့် Admin ဆီသို့ တိုက်ရိုက် မက်ဆေ့ခ်ျ ပို့ပေးသော လုပ်ဆောင်ချက်
+    """
+    bot_token = "8805872972:AAF10oO_VHnJyOxXg60S9RR9A3APBGEWi70"
+    chat_id = "8441442770"
+    
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+    try:
+        response = requests.post(url, json=payload, timeout=5)
+        return response.status_code == 200
+    except Exception as e:
+        st.error(f"Telegram notification failed: {e}")
+        return False
+
 # --- Sidebar: Role & Secure Password Authentication ---
 st.sidebar.title("🔐 System Login")
 selected_role = st.sidebar.selectbox("Select User Role", ["Viewer", "Operator", "Admin"])
 
-# Password Security Logic
-user_role = "Viewer"  # Default is Viewer
+user_role = "Viewer"  
 if selected_role in ["Operator", "Admin"]:
     password_input = st.sidebar.text_input(f"Enter Password for {selected_role}", type="password")
-    # ဒီနေရာမှာ Admin Password ကို သတ်မှတ်ထားပါတယ် (ဥပမာ - admin123)
-    admin_password = st.secrets.get("ADMIN_PASSWORD", "ayeko1993")
+    
+    # သင်သတ်မှတ်ထားသော စကားဝှက်
+    admin_password = "admin123" # (လိုချင်ရင် ဒီနေရာမှာ ကိုယ့်စကားဝှက်နဲ့ ပြန်ပြောင်းနိုင်ပါတယ်)
     
     if password_input == admin_password:
         user_role = selected_role
@@ -41,7 +62,7 @@ else:
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📡 Telegram Integration")
-tg_status = st.sidebar.checkbox("Enable Telegram Alerts", value=False)
+tg_status = st.sidebar.checkbox("Enable Telegram Alerts", value=True)
 
 # --- Main Dashboard Header ---
 st.title("🚀 Enterprise Operations Dashboard")
@@ -66,6 +87,14 @@ if editable:
     if st.button("💾 Save Changes & Notify via Telegram"):
         st.session_state.data = edited_df
         st.success("Changes saved successfully!")
+        
+        # Telegram သို့ မက်ဆေ့ခ်ျ ပို့မည်
+        if tg_status:
+            success = send_telegram_notification("🔔 *Enterprise Alert*: Withdrawal request statuses have been updated by an Operator/Admin!")
+            if success:
+                st.success("📲 Telegram notification sent successfully!")
+            else:
+                st.warning("⚠️ Changes saved, but Telegram notification failed to send.")
         st.rerun()
 else:
     st.dataframe(st.session_state.data, use_container_width=True)
